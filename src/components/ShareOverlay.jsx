@@ -5,7 +5,6 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   
   const videoRef = useRef(null);
 
@@ -53,7 +52,9 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
   };
 
   useEffect(() => {
-    // Request camera access
+    let localStream = null;
+    
+    // Request camera access - simple and fast
     const requestCamera = async () => {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -64,14 +65,17 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           }
         });
         
+        localStream = mediaStream;
         setStream(mediaStream);
+        
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
+          // Force video to play
+          videoRef.current.play().catch(console.error);
         }
       } catch (error) {
         console.error('Camera access denied:', error);
         setCameraError('Camera access denied. You can still capture without video.');
-        setVideoReady(true); // Allow capture even without video
       }
     };
 
@@ -79,45 +83,11 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
 
     // Cleanup on unmount
     return () => {
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
-
-  // Handle video ready state - optimized for faster loading
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleCanPlay = () => {
-      console.log('Video ready to capture');
-      // Set ready immediately when video can play
-      setVideoReady(true);
-    };
-
-    const handlePlaying = () => {
-      console.log('Video is playing');
-      // Backup: set ready when video starts playing
-      setVideoReady(true);
-    };
-
-    // Use canplay for fastest response (fires when first frame is available)
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('playing', handlePlaying);
-
-    // If video is already playing when effect runs, set ready immediately
-    if (video.readyState >= 2) {
-      setVideoReady(true);
-    }
-
-    return () => {
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('playing', handlePlaying);
-    };
-  }, [stream]);
 
   const handleCapture = async () => {
     if (isCapturing) return;
@@ -125,8 +95,31 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
     setIsCapturing(true);
     
     try {
+      const video = videoRef.current;
+      
+      console.log('Starting capture...', {
+        hasVideo: !!video,
+        videoWidth: video?.videoWidth,
+        readyState: video?.readyState
+      });
+      
+      // If video exists and isn't ready yet, wait a bit for it to load
+      if (video && video.readyState < 2) {
+        console.log('Video not ready, waiting...');
+        // Wait up to 1 second for video to be ready
+        const maxWaitTime = 1000;
+        const startTime = Date.now();
+        
+        while (video.readyState < 2 && Date.now() - startTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        console.log('Video ready state after wait:', video.readyState);
+      }
+      
       // Use canvas-based capture with proper options
-      const blob = await captureShareImage(videoRef.current, {
+      console.log('Calling captureShareImage...');
+      const blob = await captureShareImage(video, {
         width: 1080,
         height: 1920,
         backgroundColor: '#ffffff',
@@ -137,17 +130,28 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
         quality: 0.9
       });
 
+      console.log('Blob created:', blob ? `${blob.size} bytes` : 'null');
+
+      if (!blob) {
+        throw new Error('Failed to create image blob');
+      }
+
       // Share or download
+      console.log('Attempting to share/download...');
       const shared = await shareImage(blob, `gdg-riddle-${color}-${suit}.png`);
+      
+      console.log('Share result:', shared);
       
       if (!shared) {
         // Show success message for download
         alert('Image downloaded! You can now share it on Instagram Stories or other platforms.');
+      } else {
+        alert('Image shared successfully!');
       }
 
     } catch (error) {
       console.error('Error capturing image:', error);
-      alert('Error capturing image. Please try again.');
+      alert(`Error capturing image: ${error.message}. Please try again.`);
     } finally {
       setIsCapturing(false);
     }
@@ -174,23 +178,14 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           <div className="relative mb-6">
             <div className={`w-48 h-48 mx-auto rounded-full overflow-hidden border-4 ${colorClasses[color]} relative`}>
               {stream && !cameraError ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  {!videoReady && (
-                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
-                        <p className="text-xs text-gray-600">Loading...</p>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
               ) : (
                 <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                   <svg width="60" height="60" viewBox="0 0 24 24" fill="#9ca3af">
@@ -212,11 +207,6 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
                 {cameraError}
               </p>
             )}
-            {!cameraError && stream && !videoReady && (
-              <p className="text-sm text-gray-500 text-center mt-2">
-                Initializing camera...
-              </p>
-            )}
           </div>
 
           {/* Riddle Display */}
@@ -230,15 +220,10 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           <div className="flex gap-3">
             <button
               onClick={handleCapture}
-              disabled={isCapturing || (!videoReady && !cameraError)}
+              disabled={isCapturing}
               className={`flex-1 ${colorBgs[color]} text-white font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50`}
             >
-              {isCapturing 
-                ? 'Capturing...' 
-                : !videoReady && !cameraError 
-                  ? 'Loading camera...' 
-                  : 'Capture & Share'
-              }
+              {isCapturing ? 'Capturing...' : 'Capture & Share'}
             </button>
             
             <button

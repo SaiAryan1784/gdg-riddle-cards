@@ -11,12 +11,24 @@ export const captureShareImage = async (videoElement, options = {}) => {
     quality = 0.9
   } = options;
 
+  console.log('captureShareImage called with:', {
+    hasVideo: !!videoElement,
+    videoWidth: videoElement?.videoWidth,
+    videoHeight: videoElement?.videoHeight,
+    readyState: videoElement?.readyState,
+    color,
+    suitSymbol,
+    question: question.substring(0, 30) + '...'
+  });
+
   try {
     // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
+    
+    console.log('Canvas created:', width, 'x', height);
 
     // Fill background
     ctx.fillStyle = backgroundColor;
@@ -200,10 +212,20 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.font = '18px Inter, system-ui, sans-serif';
     ctx.fillText('Share your riddle moment with GDG Noida!', width / 2, 950);
 
-    // Convert to blob
-    return new Promise((resolve) => {
+    // Convert to blob with timeout
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Blob creation timed out after 10 seconds'));
+      }, 10000);
+      
       canvas.toBlob((blob) => {
-        resolve(blob);
+        clearTimeout(timeout);
+        if (blob) {
+          console.log('Blob created successfully:', blob.size, 'bytes');
+          resolve(blob);
+        } else {
+          reject(new Error('Canvas toBlob returned null'));
+        }
       }, 'image/png', quality);
     });
 
@@ -252,33 +274,44 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 
 // Download the captured image
 export const downloadImage = (blob, filename = 'gdg-riddle-card.png') => {
+  console.log('downloadImage called with blob:', blob?.size, 'bytes');
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
+  console.log('Download triggered for:', filename);
   link.remove();
   URL.revokeObjectURL(url);
 };
 
 // Share using Web Share API if available
 export const shareImage = async (blob, filename = 'gdg-riddle-card.png') => {
+  console.log('shareImage called with blob:', blob?.size, 'bytes');
+  
   if (navigator.share && navigator.canShare) {
+    console.log('Web Share API available, attempting to share...');
     try {
       const file = new File([blob], filename, { type: 'image/png' });
       
       if (navigator.canShare({ files: [file] })) {
+        console.log('Can share files, sharing...');
         await navigator.share({
           title: 'GDG Noida Riddle Card',
           text: 'Check out this riddle from GDG Noida!',
           files: [file]
         });
+        console.log('Share completed successfully');
         return true;
+      } else {
+        console.log('Cannot share files, falling back to download');
       }
     } catch (error) {
       console.log('Web Share API failed:', error);
     }
+  } else {
+    console.log('Web Share API not available, using download');
   }
   
   // Fallback to download
