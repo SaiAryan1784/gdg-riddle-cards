@@ -54,9 +54,14 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
   useEffect(() => {
     let localStream = null;
     
-    // Request camera access - simple and fast
+    // Request camera access - more robust for production
     const requestCamera = async () => {
       try {
+        // Check if getUserMedia is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera not supported');
+        }
+
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'user',
@@ -70,8 +75,23 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          // Force video to play
-          videoRef.current.play().catch(console.error);
+          
+          // Wait for video to load and then play
+          videoRef.current.onloadedmetadata = () => {
+            console.log('Video metadata loaded');
+            videoRef.current.play().catch(console.error);
+          };
+          
+          videoRef.current.oncanplay = () => {
+            console.log('Video can play');
+          };
+          
+          // Force play after a short delay
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.play().catch(console.error);
+            }
+          }, 100);
         }
       } catch (error) {
         console.error('Camera access denied:', error);
@@ -106,15 +126,27 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
       // If video exists and isn't ready yet, wait a bit for it to load
       if (video && video.readyState < 2) {
         console.log('Video not ready, waiting...');
-        // Wait up to 1 second for video to be ready
-        const maxWaitTime = 1000;
+        // Wait up to 3 seconds for video to be ready
+        const maxWaitTime = 3000;
         const startTime = Date.now();
         
         while (video.readyState < 2 && Date.now() - startTime < maxWaitTime) {
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         console.log('Video ready state after wait:', video.readyState);
+        
+        // If still not ready, try to force play
+        if (video.readyState < 2) {
+          console.log('Forcing video play...');
+          try {
+            await video.play();
+            // Wait a bit more after forcing play
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (e) {
+            console.log('Force play failed:', e);
+          }
+        }
       }
       
       // Use canvas-based capture with proper options
