@@ -46,7 +46,13 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.clip();
     
     // Draw video or placeholder
-    if (videoElement && videoElement.videoWidth > 0) {
+    if (videoElement && videoElement.videoWidth > 0 && videoElement.readyState >= 2) {
+      console.log('Drawing video to canvas:', {
+        videoWidth: videoElement.videoWidth,
+        videoHeight: videoElement.videoHeight,
+        readyState: videoElement.readyState
+      });
+      
       const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
       const circleSize = (cameraRadius - borderWidth) * 2;
       
@@ -68,6 +74,11 @@ export const captureShareImage = async (videoElement, options = {}) => {
       
       ctx.drawImage(videoElement, drawX, drawY, drawWidth, drawHeight);
     } else {
+      console.log('Drawing placeholder - video not ready:', {
+        hasVideo: !!videoElement,
+        videoWidth: videoElement?.videoWidth,
+        readyState: videoElement?.readyState
+      });
       // Draw placeholder
       ctx.fillStyle = '#e5e7eb';
       ctx.fillRect(

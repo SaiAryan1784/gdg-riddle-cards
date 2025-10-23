@@ -5,6 +5,7 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   
   const videoRef = useRef(null);
 
@@ -70,6 +71,7 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
       } catch (error) {
         console.error('Camera access denied:', error);
         setCameraError('Camera access denied. You can still capture without video.');
+        setVideoReady(true); // Allow capture even without video
       }
     };
 
@@ -84,6 +86,35 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
       }
     };
   }, []);
+
+  // Handle video ready state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      console.log('Video metadata loaded');
+    };
+
+    const handleLoadedData = () => {
+      console.log('Video data loaded, ready to capture');
+      setVideoReady(true);
+    };
+
+    const handleCanPlay = () => {
+      console.log('Video can play');
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('canplay', handleCanPlay);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('canplay', handleCanPlay);
+    };
+  }, [stream]);
 
   const handleCapture = async () => {
     if (isCapturing) return;
@@ -140,13 +171,23 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           <div className="relative mb-6">
             <div className={`w-48 h-48 mx-auto rounded-full overflow-hidden border-4 ${colorClasses[color]} relative`}>
               {stream && !cameraError ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  {!videoReady && (
+                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
+                        <p className="text-xs text-gray-600">Loading...</p>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                   <svg width="60" height="60" viewBox="0 0 24 24" fill="#9ca3af">
@@ -168,6 +209,11 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
                 {cameraError}
               </p>
             )}
+            {!cameraError && stream && !videoReady && (
+              <p className="text-sm text-gray-500 text-center mt-2">
+                Initializing camera...
+              </p>
+            )}
           </div>
 
           {/* Riddle Display */}
@@ -181,10 +227,15 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           <div className="flex gap-3">
             <button
               onClick={handleCapture}
-              disabled={isCapturing}
+              disabled={isCapturing || (!videoReady && !cameraError)}
               className={`flex-1 ${colorBgs[color]} text-white font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50`}
             >
-              {isCapturing ? 'Capturing...' : 'Capture & Share'}
+              {isCapturing 
+                ? 'Capturing...' 
+                : !videoReady && !cameraError 
+                  ? 'Loading camera...' 
+                  : 'Capture & Share'
+              }
             </button>
             
             <button
