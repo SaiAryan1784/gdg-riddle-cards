@@ -59,8 +59,8 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 640 },
+            height: { ideal: 480 }
           }
         });
         
@@ -87,32 +87,35 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
     };
   }, []);
 
-  // Handle video ready state
+  // Handle video ready state - optimized for faster loading
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const handleLoadedMetadata = () => {
-      console.log('Video metadata loaded');
-    };
-
-    const handleLoadedData = () => {
-      console.log('Video data loaded, ready to capture');
+    const handleCanPlay = () => {
+      console.log('Video ready to capture');
+      // Set ready immediately when video can play
       setVideoReady(true);
     };
 
-    const handleCanPlay = () => {
-      console.log('Video can play');
+    const handlePlaying = () => {
+      console.log('Video is playing');
+      // Backup: set ready when video starts playing
+      setVideoReady(true);
     };
 
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('loadeddata', handleLoadedData);
+    // Use canplay for fastest response (fires when first frame is available)
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('playing', handlePlaying);
+
+    // If video is already playing when effect runs, set ready immediately
+    if (video.readyState >= 2) {
+      setVideoReady(true);
+    }
 
     return () => {
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('playing', handlePlaying);
     };
   }, [stream]);
 
