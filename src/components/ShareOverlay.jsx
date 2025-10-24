@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { captureShareImage, shareImage } from '../lib/capture';
 
-const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
+const ShareOverlay = ({ color, suit, question, onClose }) => {
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureSuccess, setCaptureSuccess] = useState(false);
+  const [isRetryingCamera, setIsRetryingCamera] = useState(false);
   
   const videoRef = useRef(null);
 
@@ -62,7 +63,7 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
   useEffect(() => {
     let localStream = null;
     
-    // Request camera access - simplified like the working version
+    // Request camera access with improved error handling
     const requestCamera = async () => {
       try {
         // Check if we're on HTTPS or localhost (for better error messages)
@@ -76,43 +77,77 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
 
         // Check if getUserMedia is available
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Camera not supported');
+          throw new Error('Camera not supported on this device');
         }
 
+        // Request camera with more specific constraints
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'user',
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          }
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 }
+          },
+          audio: false
         });
         
         localStream = mediaStream;
         setStream(mediaStream);
         
+        // Wait for video element to be available
+        const setupVideo = () => {
+          if (videoRef.current && mediaStream) {
+            videoRef.current.srcObject = mediaStream;
+            
+            // Set up event listeners
+            videoRef.current.onloadedmetadata = () => {
+              console.log('Video metadata loaded, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+              videoRef.current.play().catch(err => {
+                console.log('Auto-play failed, trying manual play:', err);
+                // Try manual play after user interaction
+                setTimeout(() => {
+                  if (videoRef.current) {
+                    videoRef.current.play().catch(console.error);
+                  }
+                }, 500);
+              });
+            };
+            
+            videoRef.current.oncanplay = () => {
+              console.log('Video can play, ready state:', videoRef.current.readyState);
+            };
+            
+            videoRef.current.onerror = (e) => {
+              console.error('Video error:', e);
+              setCameraError('Video playback error. You can still capture without video.');
+            };
+          }
+        };
+
+        // Setup video immediately if ref is available, otherwise wait
         if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          
-          // Wait for video to load and then play
-          videoRef.current.onloadedmetadata = () => {
-            console.log('Video metadata loaded');
-            videoRef.current.play().catch(console.error);
-          };
-          
-          videoRef.current.oncanplay = () => {
-            console.log('Video can play');
-          };
-          
-          // Force play after a short delay
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.play().catch(console.error);
-            }
-          }, 100);
+          setupVideo();
+        } else {
+          // Wait a bit for the ref to be available
+          setTimeout(setupVideo, 100);
         }
+        
       } catch (error) {
-        console.error('Camera access denied:', error);
-        setCameraError('Camera access denied. You can still capture without video.');
+        console.error('Camera access error:', error);
+        
+        // Provide more specific error messages
+        let errorMessage = 'Camera access denied. You can still capture without video.';
+        
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied. Please allow camera access and refresh the page.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found. You can still capture without video.';
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'Camera not supported on this device. You can still capture without video.';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'Camera is being used by another application. Please close other apps and try again.';
+        }
+        
+        setCameraError(errorMessage);
       }
     };
 
@@ -138,14 +173,16 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
       console.log('Starting capture...', {
         hasVideo: !!video,
         videoWidth: video?.videoWidth,
-        readyState: video?.readyState
+        videoHeight: video?.videoHeight,
+        readyState: video?.readyState,
+        hasStream: !!stream
       });
       
       // If video exists and isn't ready yet, wait a bit for it to load
       if (video && video.readyState < 2) {
         console.log('Video not ready, waiting...');
-        // Wait up to 3 seconds for video to be ready
-        const maxWaitTime = 3000;
+        // Wait up to 5 seconds for video to be ready
+        const maxWaitTime = 5000;
         const startTime = Date.now();
         
         while (video.readyState < 2 && Date.now() - startTime < maxWaitTime) {
@@ -160,16 +197,29 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
           try {
             await video.play();
             // Wait a bit more after forcing play
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
           } catch (e) {
             console.log('Force play failed:', e);
           }
         }
       }
       
+      // Check if we have a valid video stream
+      const hasValidVideo = video && 
+                           video.videoWidth > 0 && 
+                           video.videoHeight > 0 && 
+                           video.readyState >= 2;
+      
+      console.log('Video validation:', {
+        hasVideo: !!video,
+        hasDimensions: video?.videoWidth > 0 && video?.videoHeight > 0,
+        readyState: video?.readyState,
+        hasValidVideo
+      });
+      
       // Use canvas-based capture with proper options
       console.log('Calling captureShareImage...');
-      const blob = await captureShareImage(video, {
+      const blob = await captureShareImage(hasValidVideo ? video : null, {
         width: 1080,
         height: 1920,
         backgroundColor: '#ffffff',
@@ -215,6 +265,45 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
       alert(`Error capturing image: ${error.message}. Please try again.`);
     } finally {
       setIsCapturing(false);
+    }
+  };
+
+  const retryCamera = async () => {
+    setIsRetryingCamera(true);
+    setCameraError(null);
+    
+    try {
+      // Stop existing stream if any
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      
+      // Wait a bit before retrying
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Request camera again
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 }
+        },
+        audio: false
+      });
+      
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play().catch(console.error);
+      }
+      
+    } catch (error) {
+      console.error('Camera retry failed:', error);
+      setCameraError('Camera retry failed. You can still capture without video.');
+    } finally {
+      setIsRetryingCamera(false);
     }
   };
 
@@ -284,10 +373,26 @@ const ShareOverlay = ({ color, suit, question, answer, onClose }) => {
             </div>
             
             {cameraError && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800 text-center">
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 text-center mb-3">
                   {cameraError}
                 </p>
+                <button
+                  onClick={retryCamera}
+                  disabled={isRetryingCamera}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  {isRetryingCamera ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      🔄 Retry Camera
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
