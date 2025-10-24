@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import ShareOverlay from './ShareOverlay';
 
 const RiddleFront = ({ color, suit, question, answer, isSelected, onReset }) => {
@@ -72,15 +73,16 @@ const RiddleFront = ({ color, suit, question, answer, isSelected, onReset }) => 
         </div>
       </div>
 
-      {/* Share Overlay */}
-      {showShareOverlay && (
+      {/* Share Overlay - Rendered using Portal to avoid width constraints */}
+      {showShareOverlay && createPortal(
         <ShareOverlay
           color={color}
           suit={suit}
           question={question}
           answer={answer}
           onClose={() => setShowShareOverlay(false)}
-        />
+        />,
+        document.body
       )}
     </>
   );

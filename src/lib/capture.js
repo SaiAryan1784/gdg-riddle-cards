@@ -30,8 +30,11 @@ export const captureShareImage = async (videoElement, options = {}) => {
     
     console.log('Canvas created:', width, 'x', height);
 
-    // Fill background
-    ctx.fillStyle = backgroundColor;
+    // Fill background with gradient
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+    bgGradient.addColorStop(0, backgroundColor);
+    bgGradient.addColorStop(1, '#f8fafc');
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
     // Draw header
@@ -45,9 +48,9 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.font = '24px Inter, system-ui, sans-serif';
     ctx.fillText('Riddle Cards', width / 2, 150);
 
-    // Draw camera area (circle)
-    const cameraY = 350;
-    const cameraRadius = 200;
+    // Draw camera area (circle) - moved down for better balance
+    const cameraY = 600;
+    const cameraRadius = 350;
     const borderWidth = 12;
     
     ctx.save();
@@ -154,12 +157,12 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.textBaseline = 'middle';
     ctx.fillText(suitSymbol, suitX, suitY);
 
-    // Draw riddle content
-    const riddleY = 700;
+    // Draw riddle content - pushed further down
+    const riddleY = 1100;
     const riddleMaxWidth = 800;
     const riddlePadding = 40;
     const riddleBoxX = width / 2 - riddleMaxWidth / 2;
-    const riddleBoxHeight = 200;
+    const riddleBoxHeight = 400;
     const riddleRadius = 20;
     
     // Add more vibrant gradient background for riddle
@@ -192,25 +195,27 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.fill();
     ctx.stroke();
     
-    // Draw question text with wrapping
+    // Draw question text with wrapping - centered vertically in the box
     ctx.fillStyle = '#333333';
-    ctx.font = '28px Inter, system-ui, sans-serif';
+    ctx.font = '50px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
-    wrapText(
-      ctx,
-      question,
-      width / 2,
-      riddleY + riddlePadding,
-      riddleMaxWidth - riddlePadding * 2,
-      35
-    );
+    // Calculate text height to center it vertically in the box
+    const textLines = wrapTextAndGetLines(ctx, question, riddleMaxWidth - riddlePadding * 2, 60);
+    const textHeight = textLines.length * 60; // line height is 60
+    const boxCenterY = riddleY + riddleBoxHeight / 2;
+    const textStartY = boxCenterY - textHeight / 2;
     
-    // Draw footer text
+    // Draw each line of text
+    textLines.forEach((line, index) => {
+      ctx.fillText(line, width / 2, textStartY + (index * 60));
+    });
+    
+    // Draw footer text - moved to bottom for better balance
     ctx.fillStyle = '#888888';
-    ctx.font = '18px Inter, system-ui, sans-serif';
-    ctx.fillText('Share your riddle moment with GDG Noida!', width / 2, 950);
+    ctx.font = '24px Inter, system-ui, sans-serif';
+    ctx.fillText('Share your riddle moment with GDG Noida!', width / 2, height - 100);
 
     // Convert to blob with timeout
     return new Promise((resolve, reject) => {
@@ -270,6 +275,28 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     }
   }
   ctx.fillText(line, x, currentY);
+}
+
+// Helper function to wrap text and return lines as array (for centering)
+function wrapTextAndGetLines(ctx, text, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    
+    if (testWidth > maxWidth && n > 0) {
+      lines.push(line.trim());
+      line = words[n] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line.trim());
+  return lines;
 }
 
 // Download the captured image
