@@ -30,8 +30,11 @@ export const captureShareImage = async (videoElement, options = {}) => {
     
     console.log('Canvas created:', width, 'x', height);
 
-    // Fill background
-    ctx.fillStyle = backgroundColor;
+    // Fill background with gradient
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+    bgGradient.addColorStop(0, backgroundColor);
+    bgGradient.addColorStop(1, '#f8fafc');
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
     // Draw header
@@ -45,9 +48,9 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.font = '24px Inter, system-ui, sans-serif';
     ctx.fillText('Riddle Cards', width / 2, 150);
 
-    // Draw camera area (circle)
-    const cameraY = 350;
-    const cameraRadius = 200;
+    // Draw camera area (circle) - moved down for better balance
+    const cameraY = 600;
+    const cameraRadius = 350;
     const borderWidth = 12;
     
     ctx.save();
@@ -58,57 +61,51 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.clip();
     
     // Draw video or placeholder
-    if (videoElement && videoElement.videoWidth > 0 && videoElement.readyState >= 2) {
+    if (videoElement && 
+        videoElement.videoWidth > 0 && 
+        videoElement.videoHeight > 0 && 
+        videoElement.readyState >= 2) {
       console.log('Drawing video to canvas:', {
         videoWidth: videoElement.videoWidth,
         videoHeight: videoElement.videoHeight,
         readyState: videoElement.readyState
       });
       
-      const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
-      const circleSize = (cameraRadius - borderWidth) * 2;
-      
-      let drawWidth, drawHeight, drawX, drawY;
-      
-      if (videoAspect > 1) {
-        // Video is wider
-        drawHeight = circleSize;
-        drawWidth = drawHeight * videoAspect;
-        drawX = width / 2 - drawWidth / 2;
-        drawY = cameraY - drawHeight / 2;
-      } else {
-        // Video is taller
-        drawWidth = circleSize;
-        drawHeight = drawWidth / videoAspect;
-        drawX = width / 2 - drawWidth / 2;
-        drawY = cameraY - drawHeight / 2;
+      try {
+        const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
+        const circleSize = (cameraRadius - borderWidth) * 2;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (videoAspect > 1) {
+          // Video is wider
+          drawHeight = circleSize;
+          drawWidth = drawHeight * videoAspect;
+          drawX = width / 2 - drawWidth / 2;
+          drawY = cameraY - drawHeight / 2;
+        } else {
+          // Video is taller
+          drawWidth = circleSize;
+          drawHeight = drawWidth / videoAspect;
+          drawX = width / 2 - drawWidth / 2;
+          drawY = cameraY - drawHeight / 2;
+        }
+        
+        ctx.drawImage(videoElement, drawX, drawY, drawWidth, drawHeight);
+        console.log('Video drawn successfully');
+      } catch (error) {
+        console.error('Error drawing video:', error);
+        // Fall back to placeholder
+        drawPlaceholder(ctx, width, cameraY, cameraRadius, borderWidth);
       }
-      
-      ctx.drawImage(videoElement, drawX, drawY, drawWidth, drawHeight);
     } else {
       console.log('Drawing placeholder - video not ready:', {
         hasVideo: !!videoElement,
         videoWidth: videoElement?.videoWidth,
+        videoHeight: videoElement?.videoHeight,
         readyState: videoElement?.readyState
       });
-      // Draw placeholder
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillRect(
-        width / 2 - (cameraRadius - borderWidth),
-        cameraY - (cameraRadius - borderWidth),
-        (cameraRadius - borderWidth) * 2,
-        (cameraRadius - borderWidth) * 2
-      );
-      
-      // Draw person icon (simplified)
-      ctx.fillStyle = '#9ca3af';
-      ctx.beginPath();
-      ctx.arc(width / 2, cameraY - 30, 40, 0, 2 * Math.PI);
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.ellipse(width / 2, cameraY + 60, 70, 50, 0, 0, 2 * Math.PI);
-      ctx.fill();
+      drawPlaceholder(ctx, width, cameraY, cameraRadius, borderWidth);
     }
     
     ctx.restore();
@@ -154,12 +151,12 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.textBaseline = 'middle';
     ctx.fillText(suitSymbol, suitX, suitY);
 
-    // Draw riddle content
-    const riddleY = 700;
+    // Draw riddle content - pushed further down
+    const riddleY = 1100;
     const riddleMaxWidth = 800;
     const riddlePadding = 40;
     const riddleBoxX = width / 2 - riddleMaxWidth / 2;
-    const riddleBoxHeight = 200;
+    const riddleBoxHeight = 400;
     const riddleRadius = 20;
     
     // Add more vibrant gradient background for riddle
@@ -192,25 +189,27 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.fill();
     ctx.stroke();
     
-    // Draw question text with wrapping
+    // Draw question text with wrapping - centered vertically in the box
     ctx.fillStyle = '#333333';
-    ctx.font = '28px Inter, system-ui, sans-serif';
+    ctx.font = '50px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
-    wrapText(
-      ctx,
-      question,
-      width / 2,
-      riddleY + riddlePadding,
-      riddleMaxWidth - riddlePadding * 2,
-      35
-    );
+    // Calculate text height to center it vertically in the box
+    const textLines = wrapTextAndGetLines(ctx, question, riddleMaxWidth - riddlePadding * 2);
+    const textHeight = textLines.length * 60; // line height is 60
+    const boxCenterY = riddleY + riddleBoxHeight / 2;
+    const textStartY = boxCenterY - textHeight / 2;
     
-    // Draw footer text
+    // Draw each line of text
+    textLines.forEach((line, index) => {
+      ctx.fillText(line, width / 2, textStartY + (index * 60));
+    });
+    
+    // Draw footer text - moved to bottom for better balance
     ctx.fillStyle = '#888888';
-    ctx.font = '18px Inter, system-ui, sans-serif';
-    ctx.fillText('Share your riddle moment with GDG Noida!', width / 2, 950);
+    ctx.font = '24px Inter, system-ui, sans-serif';
+    ctx.fillText('Share your riddle moment with GDG Noida!', width / 2, height - 100);
 
     // Convert to blob with timeout
     return new Promise((resolve, reject) => {
@@ -235,26 +234,34 @@ export const captureShareImage = async (videoElement, options = {}) => {
   }
 };
 
-// Helper function to draw rounded rectangles
-function roundRect(ctx, x, y, width, height, radius) {
+
+// Helper function to draw placeholder when video is not available
+function drawPlaceholder(ctx, width, cameraY, cameraRadius, borderWidth) {
+  // Draw placeholder background
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(
+    width / 2 - (cameraRadius - borderWidth),
+    cameraY - (cameraRadius - borderWidth),
+    (cameraRadius - borderWidth) * 2,
+    (cameraRadius - borderWidth) * 2
+  );
+  
+  // Draw person icon (simplified)
+  ctx.fillStyle = '#9ca3af';
   ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
+  ctx.arc(width / 2, cameraY - 30, 40, 0, 2 * Math.PI);
+  ctx.fill();
+  
+  ctx.beginPath();
+  ctx.ellipse(width / 2, cameraY + 60, 70, 50, 0, 0, 2 * Math.PI);
+  ctx.fill();
 }
 
-// Helper function to wrap text
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+// Helper function to wrap text and return lines as array (for centering)
+function wrapTextAndGetLines(ctx, text, maxWidth) {
   const words = text.split(' ');
+  const lines = [];
   let line = '';
-  let currentY = y;
   
   for (let n = 0; n < words.length; n++) {
     const testLine = line + words[n] + ' ';
@@ -262,14 +269,14 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     const testWidth = metrics.width;
     
     if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line, x, currentY);
+      lines.push(line.trim());
       line = words[n] + ' ';
-      currentY += lineHeight;
     } else {
       line = testLine;
     }
   }
-  ctx.fillText(line, x, currentY);
+  lines.push(line.trim());
+  return lines;
 }
 
 // Download the captured image
