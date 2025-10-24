@@ -13,6 +13,13 @@ const ColorCard = ({ color, isFlipped, isSelected, isOtherSelected, onFlip, onRe
     red: 'bg-gdg-red'
   };
 
+  const colorImages = {
+    blue: '/B1.png',
+    green: '/G1.png',
+    yellow: '/Y1.png',
+    red: '/R1.png'
+  };
+
   const handleClick = () => {
     if (isAnimating || isOtherSelected) return;
     
@@ -67,15 +74,17 @@ const ColorCard = ({ color, isFlipped, isSelected, isOtherSelected, onFlip, onRe
         }}
       >
         {/* Card Back */}
-        <div className={`absolute inset-0 backface-hidden rounded-2xl ${colorClasses[color]} shadow-md hover:shadow-xl transition-all duration-300 flex items-center justify-center border-2 border-gray-100`}>
-          <div className="text-white text-center p-4">
-            <div className="text-3xl md:text-4xl font-bold mb-2">
-              {color.charAt(0).toUpperCase() + color.slice(1)}
-            </div>
-            <div className="text-sm md:text-base opacity-90 font-medium">
-              Tap to reveal
-            </div>
-          </div>
+        <div className={`absolute inset-0 backface-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border-2 border-gray-100 overflow-hidden`}>
+          <img 
+            src={colorImages[color]} 
+            alt={`${color} card`}
+            className="w-full h-full object-cover"
+            style={{
+              imageRendering: 'pixelated',
+              imageRendering: '-moz-crisp-edges',
+              imageRendering: 'crisp-edges'
+            }}
+          />
         </div>
 
         {/* Card Front */}
