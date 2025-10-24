@@ -41,9 +41,13 @@ const CardGrid = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className={`text-center mb-12 md:mb-16 transition-opacity duration-500 ${selectedCard === null ? 'opacity-100' : 'opacity-0'}`}>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3">
-            GDG Noida
-          </h1>
+          <div className="mb-4">
+            <img 
+              src="/devfest Green logo.png" 
+              alt="GDG Noida" 
+              className="h-16 md:h-20 lg:h-24 w-auto mx-auto"
+            />
+          </div>
           <h2 className="text-xl md:text-2xl font-semibold text-gray-700 mb-4">
             Riddle Cards
           </h2>

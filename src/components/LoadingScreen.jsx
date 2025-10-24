@@ -28,14 +28,13 @@ const LoadingScreen = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 bg-gray-50 flex flex-col items-center justify-center z-50">
       <div className="text-center">
-        {/* GDG Logo/Text */}
+        {/* GDG Logo */}
         <div className="mb-8">
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-2">
-            GDG
-          </h1>
-          <h2 className="text-2xl md:text-3xl font-semibold text-gray-700">
-            Noida
-          </h2>
+          <img 
+            src="/devfest Green logo.png" 
+            alt="GDG Noida" 
+            className="h-24 md:h-32 w-auto mx-auto"
+          />
         </div>
 
         {/* Loading Animation */}

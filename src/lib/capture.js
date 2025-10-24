@@ -37,19 +37,36 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Draw header
-    ctx.fillStyle = '#333333';
-    ctx.font = 'bold 48px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('GDG Noida', width / 2, 80);
-
+    // Draw header with logo
+    const logoImg = new Image();
+    logoImg.src = '/devfest Green logo.png';
+    
+    // Wait for logo to load before drawing
+    await new Promise((resolve) => {
+      if (logoImg.complete) {
+        resolve();
+      } else {
+        logoImg.onload = resolve;
+      }
+    });
+    
+    // Draw logo (scaled to fit) - made bigger and moved down
+    const logoWidth = 350;
+    const logoHeight = (logoImg.height / logoImg.width) * logoWidth;
+    const logoX = width / 2 - logoWidth / 2;
+    const logoY = 60;
+    
+    ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+    
+    // Draw subtitle
     ctx.fillStyle = '#666666';
     ctx.font = '24px Inter, system-ui, sans-serif';
-    ctx.fillText('Riddle Cards', width / 2, 150);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Riddle Cards', width / 2, logoY + logoHeight + 20);
 
-    // Draw camera area (circle) - moved down for better balance
-    const cameraY = 600;
+    // Draw camera area (circle) - moved down even further
+    const cameraY = 750;
     const cameraRadius = 350;
     const borderWidth = 12;
     
@@ -151,12 +168,12 @@ export const captureShareImage = async (videoElement, options = {}) => {
     ctx.textBaseline = 'middle';
     ctx.fillText(suitSymbol, suitX, suitY);
 
-    // Draw riddle content - pushed further down
-    const riddleY = 1100;
-    const riddleMaxWidth = 800;
-    const riddlePadding = 40;
+    // Draw riddle content - moved up a bit
+    const riddleY = 1150;
+    const riddleMaxWidth = 600;
+    const riddlePadding = 30;
     const riddleBoxX = width / 2 - riddleMaxWidth / 2;
-    const riddleBoxHeight = 400;
+    const riddleBoxHeight = 300;
     const riddleRadius = 20;
     
     // Add more vibrant gradient background for riddle
@@ -191,19 +208,19 @@ export const captureShareImage = async (videoElement, options = {}) => {
     
     // Draw question text with wrapping - centered vertically in the box
     ctx.fillStyle = '#333333';
-    ctx.font = '50px Inter, system-ui, sans-serif';
+    ctx.font = '40px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
     // Calculate text height to center it vertically in the box
     const textLines = wrapTextAndGetLines(ctx, question, riddleMaxWidth - riddlePadding * 2);
-    const textHeight = textLines.length * 60; // line height is 60
+    const textHeight = textLines.length * 50; // line height is 50
     const boxCenterY = riddleY + riddleBoxHeight / 2;
     const textStartY = boxCenterY - textHeight / 2;
     
     // Draw each line of text
     textLines.forEach((line, index) => {
-      ctx.fillText(line, width / 2, textStartY + (index * 60));
+      ctx.fillText(line, width / 2, textStartY + (index * 50));
     });
     
     // Draw footer text - moved to bottom for better balance
