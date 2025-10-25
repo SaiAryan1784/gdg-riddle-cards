@@ -2,74 +2,74 @@
 export const riddles = {
   blue: {
     spade: {
-      question: "I speak without a mouth and hear without ears. What am I?",
-      answer: "Echo"
+      question: "🏙 I happen once a year, with talks, code, and cheer. Noida's geeks all gather near, what event brings them here?",
+      answer: ""
     },
     club: {
-      question: "Light as a feather, strongest man can't hold me long. What am I?",
-      answer: "Breath"
+      question: "🎁 You code, you learn, you might win a prize, But community spirit is the ultimate rise. I'm more than a fest, I'm a family vibe, Who am I, where coders thrive?",
+      answer: ""
     },
     heart: {
-      question: "Cities but no houses, forests but no trees, water but no fish. What am I?",
-      answer: "Map"
+      question: "🌐 I'm the web's best mate, lightning fast and sleek, Built by Google, guess my physique?",
+      answer: ""
     },
     diamond: {
-      question: "The more you take, the more you leave behind. What are they?",
-      answer: "Footsteps"
+      question: "☁ I live in the cloud, with data to spare, Run your apps, train AI I'm everywhere.",
+      answer: ""
     }
   },
   green: {
     spade: {
-      question: "Tall when young, short when old. What am I?",
-      answer: "Candle"
+      question: "📱 I live inside your pocket, where apps reside, An open playground with Google pride.",
+      answer: ""
     },
     club: {
-      question: "I can be cracked, made, told, and played. What am I?",
-      answer: "Joke"
+      question: "🗺 I guide your path from start to end, Turn-by-turn, your digital friend.",
+      answer: ""
     },
     heart: {
-      question: "I have keys but no locks... What am I?",
-      answer: "Keyboard"
+      question: "💬 I let your code speak to APIs and brains, Understanding words through data and chains",
+      answer: ""
     },
     diamond: {
-      question: "I fly without wings, I cry without eyes. What am I?",
-      answer: "Cloud"
+      question: " AI research is my game, Data flows to train my brain",
+      answer: ""
     }
   },
   yellow: {
     spade: {
-      question: "Travels around the world but stays in a corner. What is it?",
-      answer: "Stamp"
+      question: " I answer billions every day, Just type your thoughts, I'll show the way.",
+      answer: ""
     },
     club: {
-      question: "Poor people have it; rich need it; if you eat it you die. What is it?",
-      answer: "Nothing"
+      question: "💻 We meet, we code, we share the flame, Digital trendsetter all in the game Google backed, guess our name",
+      answer: ""
     },
     heart: {
-      question: "Must be broken before you can use it. What is it?",
-      answer: "Egg"
+      question: "🚀 Build once, deploy to web and phone, My widgets make UI your own.",
+      answer: ""
     },
     diamond: {
-      question: "No voice yet sometimes sings; no heart yet sometimes weeps. What am I?",
-      answer: "Violin"
+      question: " I set the tone, I light the day, Speakers and cheers pave the way. Before all sessions start their spree, Where's the spotlight meant to be?",
+      answer: ""
     }
   },
   red: {
     spade: {
-      question: "Always hungry; must be fed; touches you and turns you red. What am I?",
-      answer: "Fire"
+      question: " I'm everyone's favorite stop in line, T-shirts, stickers, bottles all divine. You'll spot smiles, not stress, Guess this queue of happiness!",
+      answer: ""
     },
     club: {
-      question: "The more there is, the less you see. What is it?",
-      answer: "Darkness"
+      question: " I frame your smile, your crew, your zest, Memories made, you strike your best. Props and backdrops, lights so cool. What corner makes Insta rule?",
+      answer: ""
     },
     heart: {
-      question: "Forward I'm heavy; backward I'm not. What am I?",
-      answer: "Ton"
+      question: " You see them run, yet calm and bright, Managing chaos with all their might. Without them, events can't flow, Who are these heroes you should know?",
+      answer: ""
     },
     diamond: {
-      question: "Many keys but can't open a single lock. What am I?",
-      answer: "Piano"
+      question: " I'm not a lecture, I make you try, Hands-on learning, give it a fly! Code or design, you'll do the rest, What's this practical part of the fest?",
+      answer: ""
     }
   }
 };
